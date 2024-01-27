@@ -146,6 +146,13 @@ func (idx *Index) setIdxData() error {
 	_, err = f.Write(data)
 	return err
 }
+func (idx *Index) Remove(profileName string) error {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	delete(idx.files, profileName)
+	return idx.setIdxData()
+}
 
 // assign data to a new or existing profile
 func (idx *Index) Set(profileName string, profileData []byte) error {
@@ -213,25 +220,6 @@ func (idx *Index) Apply(profileName string) error {
 	return ErrProfileNotFound
 }
 
-// Create a new index container for keeping track of files
-func CreateNewIndex(idxDir, aclFilename string) (*Index, error) {
-	var err error
-
-	idx := &Index{
-		idxDir:      idxDir,
-		aclFilename: aclFilename,
-		mu:          sync.Mutex{},
-		files:       make(map[string]IndexFileInfo),
-	}
-
-	// create the directory if necessary
-	if err = idx.initializeIdx(); err != nil {
-		return nil, err
-	}
-
-	return idx, nil
-}
-
 func (idx *Index) RenameProfile(profileNameOld, profileNameNew string) error {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
@@ -249,4 +237,23 @@ func (idx *Index) RenameProfile(profileNameOld, profileNameNew string) error {
 	idx.files[profileNameNew] = idx.files[profileNameOld]
 	delete(idx.files, profileNameOld)
 	return idx.setIdxData()
+}
+
+// Create a new index container for keeping track of files
+func CreateNewIndex(idxDir, aclFilename string) (*Index, error) {
+	var err error
+
+	idx := &Index{
+		idxDir:      idxDir,
+		aclFilename: aclFilename,
+		mu:          sync.Mutex{},
+		files:       make(map[string]IndexFileInfo),
+	}
+
+	// create the directory if necessary
+	if err = idx.initializeIdx(); err != nil {
+		return nil, err
+	}
+
+	return idx, nil
 }
